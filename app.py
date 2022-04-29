@@ -1,35 +1,30 @@
-import streamlit as st
+from flask import Flask, render_template, request
 import os
+import pyzbar.pyzbar
 from pyzbar.pyzbar import decode
 import cv2
 import numpy as np
 from PIL import Image
 
-def load_image(img):
-    im = Image.open(img)
-    return im
+app = Flask(__name__)
 
+@app.route('/', methods=['GET'])
 def main():
-    menu = ['Считать штрих-код','LIVE-DECODER']
+            return render_template('index.html')
+@app.route('/', methods=['POST'])
+def predict():
+    imagefile = request.files['imagefile']
+    image_path = './images/' + imagefile.filename
+    imagefile.save(image_path)
 
-    choice = st.sidebar.selectbox('Menu', menu)
+    image = Image.open(image_path)
+    image = np.array(image)
+    image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+    result = []
+    for code in decode(image):
+        # result.append(code.type)
+        result.append(code.data.decode('utf-8'))
 
-    if choice == 'Считать штрих-код':
-        st.subheader('Считать штрих-код')
-        image_file = st.file_uploader('Загрузите изображение', type=['jpg','png','jpeg'])
-        if image_file is not None:
-            image = Image.open(image_file)
-            image = np.array(image)
-            image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
-            st.image(image)
-            result = []
-            for code in decode(image):
-                result.append(code.type)
-                result.append(code.data.decode('utf-8'))
-            st.write(result)
-
-    else:
-        st.subheader('LIVE-DECODER')
-
+    return render_template('index.html', filenames=image, prediction = result)
 if __name__ =='__main__':
-    main()
+    app.run(port=3000, debug=True)
